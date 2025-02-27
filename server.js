@@ -114,7 +114,9 @@ wss.on('connection', (ws) => {
 
     // Send initial state with player ID, world, and join message
     ws.send(JSON.stringify({ id: playerId, world: worldState }));
-    broadcast({ join: playerId }, ws);
+    players[playerId] = { x: 0, y: 5, z: 0 }; // Already done earlier, just ensuring clarity
+    broadcast({ join: playerId }, ws); // Chat notification
+    broadcastState(); // Immediately send full state to all clients
 
     ws.on('message', (message) => {
         const data = JSON.parse(message);

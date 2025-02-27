@@ -1,54 +1,57 @@
+// Define worldSize at the top
+const worldSize = 400;
+
 // Scene setup
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true; // Enable shadows
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadow edges
 document.body.appendChild(renderer.domElement);
 
 // Lock mouse for control
 document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
-document.addEventListener('click', () => document.body.requestPointerLock(), false);
+document.addEventListener('click', function () { document.body.requestPointerLock(); }, false);
 
-// Debugging: Blue background
-renderer.setClearColor(0x0000ff);
+// Background: Light blue sky
+renderer.setClearColor(0x87ceeb);
 
-// Pigeon (customizable model)
-const pigeon = new THREE.Group();
-let bodyGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.5);
-let bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-pigeon.add(body);
-let wingGeometry = new THREE.BoxGeometry(0.4, 0.04, 0.2);
-let wingMaterial = new THREE.MeshBasicMaterial({ color: 0xdddddd });
-const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-leftWing.position.set(-0.3, 0, 0);
-leftWing.rotation.z = Math.PI / 6;
-pigeon.add(leftWing);
-const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-rightWing.position.set(0.3, 0, 0);
-rightWing.rotation.z = -Math.PI / 6;
-pigeon.add(rightWing);
-const beakGeometry = new THREE.BoxGeometry(0.1, 0.06, 0.06);
-const beakMaterial = new THREE.MeshBasicMaterial({ color: 0xffa500 });
-const beak = new THREE.Mesh(beakGeometry, beakMaterial);
-beak.position.set(0, 0, 0.3);
-pigeon.add(beak);
-// Feet
-let feetGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-let feetMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
-const leftFoot = new THREE.Mesh(feetGeometry, feetMaterial);
-leftFoot.position.set(-0.1, -0.1, 0.1);
-pigeon.add(leftFoot);
-const rightFoot = new THREE.Mesh(feetGeometry, feetMaterial);
-rightFoot.position.set(0.1, -0.1, 0.1);
-pigeon.add(rightFoot);
+// Ambient light (soft base illumination)
+const ambientLight = new THREE.AmbientLight(0x404040, 0.2);
+scene.add(ambientLight);
+
+// Sun setup
+const sunGeometry = new THREE.SphereGeometry(10, 32, 32);
+const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff99 }); // Bright yellowish
+const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+sun.position.set(200, 300, 200); // High in the sky
+scene.add(sun);
+
+// Sun light
+const sunLight = new THREE.DirectionalLight(0xffffcc, 1.0); // Warm light, moderate intensity
+sunLight.position.copy(sun.position); // Align with the sun
+sunLight.target.position.set(0, 0, 0); // Point at scene center
+sunLight.castShadow = true; // Enable shadow casting
+scene.add(sunLight);
+scene.add(sunLight.target);
+
+// Configure shadow properties (worldSize is now defined)
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 600;
+sunLight.shadow.camera.left = -worldSize / 2;
+sunLight.shadow.camera.right = worldSize / 2;
+sunLight.shadow.camera.top = worldSize / 2;
+sunLight.shadow.camera.bottom = -worldSize / 2;
 
 // Ground
-const worldSize = 400;
 const groundGeometry = new THREE.PlaneGeometry(worldSize, worldSize);
-const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x666633 });
+const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x666633 });
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
 scene.add(ground);
 
 // Roads and Sidewalks
@@ -59,49 +62,55 @@ const sidewalkPositions = [];
 for (let x = -180; x <= 180; x += 40) {
     const roadH = new THREE.Mesh(
         new THREE.BoxGeometry(worldSize, 0.1, roadWidth),
-        new THREE.MeshBasicMaterial({ color: 0x333333 })
+        new THREE.MeshStandardMaterial({ color: 0x333333 })
     );
     roadH.position.set(0, 0.05, x);
+    roadH.receiveShadow = true;
     scene.add(roadH);
     roadPositions.push({ x: 0, z: x, isHorizontal: true });
 
     const sidewalkH1 = new THREE.Mesh(
         new THREE.BoxGeometry(worldSize, 0.15, sidewalkWidth),
-        new THREE.MeshBasicMaterial({ color: 0xd3d3d3 })
+        new THREE.MeshStandardMaterial({ color: 0xd3d3d3 })
     );
     sidewalkH1.position.set(0, 0.075, x + roadWidth / 2 + sidewalkWidth / 2);
+    sidewalkH1.receiveShadow = true;
     scene.add(sidewalkH1);
     sidewalkPositions.push({ x: 0, z: x + roadWidth / 2 + sidewalkWidth / 2, isHorizontal: true });
 
     const sidewalkH2 = new THREE.Mesh(
         new THREE.BoxGeometry(worldSize, 0.15, sidewalkWidth),
-        new THREE.MeshBasicMaterial({ color: 0xd3d3d3 })
+        new THREE.MeshStandardMaterial({ color: 0xd3d3d3 })
     );
     sidewalkH2.position.set(0, 0.075, x - roadWidth / 2 - sidewalkWidth / 2);
+    sidewalkH2.receiveShadow = true;
     scene.add(sidewalkH2);
     sidewalkPositions.push({ x: 0, z: x - roadWidth / 2 - sidewalkWidth / 2, isHorizontal: true });
 
     const roadV = new THREE.Mesh(
         new THREE.BoxGeometry(roadWidth, 0.1, worldSize),
-        new THREE.MeshBasicMaterial({ color: 0x333333 })
+        new THREE.MeshStandardMaterial({ color: 0x333333 })
     );
     roadV.position.set(x, 0.05, 0);
+    roadV.receiveShadow = true;
     scene.add(roadV);
     roadPositions.push({ x: x, z: 0, isHorizontal: false });
 
     const sidewalkV1 = new THREE.Mesh(
         new THREE.BoxGeometry(sidewalkWidth, 0.15, worldSize),
-        new THREE.MeshBasicMaterial({ color: 0xd3d3d3 })
+        new THREE.MeshStandardMaterial({ color: 0xd3d3d3 })
     );
     sidewalkV1.position.set(x + roadWidth / 2 + sidewalkWidth / 2, 0.075, 0);
+    sidewalkV1.receiveShadow = true;
     scene.add(sidewalkV1);
     sidewalkPositions.push({ x: x + roadWidth / 2 + sidewalkWidth / 2, z: 0, isHorizontal: false });
 
     const sidewalkV2 = new THREE.Mesh(
         new THREE.BoxGeometry(sidewalkWidth, 0.15, worldSize),
-        new THREE.MeshBasicMaterial({ color: 0xd3d3d3 })
+        new THREE.MeshStandardMaterial({ color: 0xd3d3d3 })
     );
     sidewalkV2.position.set(x - roadWidth / 2 - sidewalkWidth / 2, 0.075, 0);
+    sidewalkV2.receiveShadow = true;
     scene.add(sidewalkV2);
     sidewalkPositions.push({ x: x - roadWidth / 2 - sidewalkWidth / 2, z: 0, isHorizontal: false });
 }
@@ -115,8 +124,10 @@ for (let i = 0; i < buildingCount; i++) {
     const height = Math.random() * 40 + 10;
     const buildingColors = [0x8b4513, 0xa9a9a9, 0x4682b4, 0xdeb887];
     const buildingGeometry = new THREE.BoxGeometry(width, height, depth);
-    const buildingMaterial = new THREE.MeshBasicMaterial({ color: buildingColors[Math.floor(Math.random() * buildingColors.length)] });
+    const buildingMaterial = new THREE.MeshStandardMaterial({ color: buildingColors[Math.floor(Math.random() * buildingColors.length)] });
     const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+    building.castShadow = true;
+    building.receiveShadow = true;
 
     let posX, posZ, isValid;
     do {
@@ -148,9 +159,11 @@ for (let x = -160; x <= 160; x += 40) {
     for (let z = -160; z <= 160; z += 40) {
         const pole = new THREE.Mesh(
             new THREE.BoxGeometry(0.2, 5, 0.2),
-            new THREE.MeshBasicMaterial({ color: 0x333333 })
+            new THREE.MeshStandardMaterial({ color: 0x333333 })
         );
         pole.position.set(x, 2.5, z);
+        pole.castShadow = true;
+        pole.receiveShadow = true;
         scene.add(pole);
 
         const light = new THREE.Mesh(
@@ -166,8 +179,10 @@ for (let x = -160; x <= 160; x += 40) {
 for (let i = 0; i < 30; i++) {
     const hydrant = new THREE.Mesh(
         new THREE.BoxGeometry(0.5, 1, 0.5),
-        new THREE.MeshBasicMaterial({ color: 0xff0000 })
+        new THREE.MeshStandardMaterial({ color: 0xff0000 })
     );
+    hydrant.castShadow = true;
+    hydrant.receiveShadow = true;
     let posX, posZ, isValid;
     do {
         posX = (Math.random() - 0.5) * (worldSize - 20);
@@ -206,13 +221,17 @@ for (let i = 0; i < npcCount; i++) {
     const npc = new THREE.Group();
     const npcBody = new THREE.Mesh(
         new THREE.BoxGeometry(0.5, 1.5, 0.5),
-        new THREE.MeshBasicMaterial({ color: 0x0000ff })
+        new THREE.MeshStandardMaterial({ color: 0x0000ff })
     );
+    npcBody.castShadow = true;
+    npcBody.receiveShadow = true;
     npc.add(npcBody);
     const npcHead = new THREE.Mesh(
         new THREE.BoxGeometry(0.4, 0.4, 0.4),
-        new THREE.MeshBasicMaterial({ color: 0xffd700 })
+        new THREE.MeshStandardMaterial({ color: 0xffd700 })
     );
+    npcHead.castShadow = true;
+    npcHead.receiveShadow = true;
     npcHead.position.y = 1;
     npc.add(npcHead);
 
@@ -220,9 +239,11 @@ for (let i = 0; i < npcCount; i++) {
         const hatType = hatTypes[Math.floor(Math.random() * hatTypes.length)];
         const hat = new THREE.Mesh(
             hatType.geometry,
-            new THREE.MeshBasicMaterial({ color: hatType.color })
+            new THREE.MeshStandardMaterial({ color: hatType.color })
         );
         hat.position.y = 1.3;
+        hat.castShadow = true;
+        hat.receiveShadow = true;
         npc.hat = hat;
         npc.hatType = hatType;
         npc.add(hat);
@@ -250,32 +271,46 @@ for (let i = 0; i < carCount; i++) {
     const car = new THREE.Group();
     const carBody = new THREE.Mesh(
         new THREE.BoxGeometry(2, 1, 4),
-        new THREE.MeshBasicMaterial({ color: Math.random() * 0xffffff })
+        new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff })
     );
+    carBody.castShadow = true;
+    carBody.receiveShadow = true;
     car.add(carBody);
 
     const tireGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    const tireMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const tireMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
     const tire1 = new THREE.Mesh(tireGeometry, tireMaterial);
     tire1.position.set(-1, -0.25, 1.5);
+    tire1.castShadow = true;
+    tire1.receiveShadow = true;
     car.add(tire1);
     const tire2 = new THREE.Mesh(tireGeometry, tireMaterial);
     tire2.position.set(1, -0.25, 1.5);
+    tire2.castShadow = true;
+    tire2.receiveShadow = true;
     car.add(tire2);
     const tire3 = new THREE.Mesh(tireGeometry, tireMaterial);
     tire3.position.set(-1, -0.25, -1.5);
+    tire3.castShadow = true;
+    tire3.receiveShadow = true;
     car.add(tire3);
     const tire4 = new THREE.Mesh(tireGeometry, tireMaterial);
     tire4.position.set(1, -0.25, -1.5);
+    tire4.castShadow = true;
+    tire4.receiveShadow = true;
     car.add(tire4);
 
     const windowGeometry = new THREE.BoxGeometry(1.8, 0.5, 0.1);
-    const windowMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa });
+    const windowMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
     const windowFront = new THREE.Mesh(windowGeometry, windowMaterial);
     windowFront.position.set(0, 0.25, 2);
+    windowFront.castShadow = true;
+    windowFront.receiveShadow = true;
     car.add(windowFront);
     const windowBack = new THREE.Mesh(windowGeometry, windowMaterial);
     windowBack.position.set(0, 0.25, -2);
+    windowBack.castShadow = true;
+    windowBack.receiveShadow = true;
     car.add(windowBack);
 
     const road = roadPositions[Math.floor(Math.random() * roadPositions.length)];
@@ -293,37 +328,68 @@ for (let i = 0; i < carCount; i++) {
     cars.push(car);
 }
 
-// Spawn pigeon safely
-let spawnAttempts = 0;
-const maxAttempts = 1000;
-while (spawnAttempts < maxAttempts) {
-    pigeon.position.set(
-        (Math.random() - 0.5) * (worldSize - 20),
-        5,
-        (Math.random() - 0.5) * (worldSize - 20)
-    );
-    if (!checkCollision(pigeon.position, 0.3, 0.2, 0.5)) {
-        break;
-    }
-    spawnAttempts++;
-}
-if (spawnAttempts >= maxAttempts) {
-    console.error("Couldn’t find a valid spawn point; defaulting to center");
-    pigeon.position.set(0, 5, 0);
-}
-scene.add(pigeon);
+// Load Seagull Model
+let seagull;
+let mixer;
+const loader = new THREE.GLTFLoader();
+loader.load(
+    './models/seagull.glb',
+    function (gltf) {
+        seagull = gltf.scene;
+        seagull.scale.set(0.3, 0.3, 0.3);
+        seagull.rotation.y = -Math.PI;
 
-// Movement and rotation variables
-let pitch = 0;
-let yaw = 0;
+        seagull.traverse(function (child) {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                console.log('Mesh:', child.name);
+                console.log('Material Name:', child.material.name);
+                console.log('Material Type:', child.material.type);
+                console.log('Material Color:', child.material.color.getHexString());
+                console.log('Texture Map:', child.material.map ? child.material.map.sourceFile || 'Embedded' : 'None');
+            }
+        });
+
+        let spawnAttempts = 0;
+        const maxAttempts = 1000;
+        while (spawnAttempts < maxAttempts) {
+            seagull.position.set(
+                (Math.random() - 0.5) * (worldSize - 20),
+                5,
+                (Math.random() - 0.5) * (worldSize - 20)
+            );
+            if (!checkCollision(seagull.position, 0.3, 0.2, 0.5)) break;
+            spawnAttempts++;
+        }
+        if (spawnAttempts >= maxAttempts) {
+            console.error("Couldn’t find a valid spawn point; defaulting to center");
+            seagull.position.set(0, 5, 0);
+        }
+
+        mixer = new THREE.AnimationMixer(seagull);
+        const flapAction = mixer.clipAction(gltf.animations.find(function (anim) { return anim.name === 'flap'; }));
+        if (!flapAction) console.error("Flap animation not found. Available animations:", gltf.animations);
+        flapAction.play();
+
+        scene.add(seagull);
+        console.log('Seagull model loaded with flap animation');
+    },
+    function (xhr) { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); },
+    function (error) { console.error('Error loading seagull model:', error); }
+);
+
+// Movement and state variables
+let pitch = 0, yaw = 0;
 const speed = 0.3;
 let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+let lastPosition = new THREE.Vector3();
+let velocity = new THREE.Vector3();
+const clock = new THREE.Clock();
 let currentHat = null;
 const poops = [];
 const groundHats = {};
 let poopCount = 0;
-let wingFlapAngle = 0;
-let flapSpeed = 0.1;
 
 // Poop counter UI
 const poopCounter = document.createElement('div');
@@ -371,10 +437,10 @@ function addChatMessage(message) {
     const msg = document.createElement('div');
     msg.textContent = message;
     chatBox.appendChild(msg);
-    chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to bottom
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-chatSend.addEventListener('click', () => {
+chatSend.addEventListener('click', function () {
     const message = chatInput.value.trim();
     if (message && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ chat: message }));
@@ -382,87 +448,21 @@ chatSend.addEventListener('click', () => {
     }
 });
 
-chatInput.addEventListener('keypress', (event) => {
-    if (event.key === 'Enter') {
-        chatSend.click();
-    }
+chatInput.addEventListener('keypress', function (event) {
+    if (event.key === 'Enter') chatSend.click();
 });
-
-// Customization screen
-const customizationScreen = document.createElement('div');
-customizationScreen.style.position = 'absolute';
-customizationScreen.style.top = '50%';
-customizationScreen.style.left = '50%';
-customizationScreen.style.transform = 'translate(-50%, -50%)';
-customizationScreen.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-customizationScreen.style.color = 'white';
-customizationScreen.style.padding = '20px';
-customizationScreen.style.display = 'none';
-customizationScreen.innerHTML = `
-    <h2>Pigeon Customization</h2>
-    <label>Body Color: <input type="color" id="bodyColor" value="#ffffff"></label><br>
-    <label>Wing Color: <input type="color" id="wingColor" value="#dddddd"></label><br>
-    <label>Feet Color: <input type="color" id="feetColor" value="#808080"></label><br>
-    <label>Body Thickness: <input type="range" id="bodyThickness" min="0.1" max="0.5" step="0.05" value="0.3"></label><br>
-    <label>Wing Scale: <input type="range" id="wingScale" min="0.2" max="0.6" step="0.05" value="0.4"></label><br>
-    <button id="applyCustomization">Apply</button>
-`;
-document.body.appendChild(customizationScreen);
-
-document.getElementById('applyCustomization').addEventListener('click', () => {
-    const customization = {
-        bodyColor: document.getElementById('bodyColor').value,
-        wingColor: document.getElementById('wingColor').value,
-        feetColor: document.getElementById('feetColor').value,
-        bodyThickness: parseFloat(document.getElementById('bodyThickness').value),
-        wingScale: parseFloat(document.getElementById('wingScale').value)
-    };
-    applyCustomization(customization);
-    if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ customization }));
-    }
-    customizationScreen.style.display = 'none';
-    document.body.requestPointerLock();
-});
-
-function applyCustomization(customization) {
-    bodyMaterial.color.set(customization.bodyColor);
-    wingMaterial.color.set(customization.wingColor);
-    feetMaterial.color.set(customization.feetColor);
-    const bodyThickness = customization.bodyThickness;
-    const wingScale = customization.wingScale;
-    pigeon.remove(body);
-    pigeon.remove(leftWing);
-    pigeon.remove(rightWing);
-    bodyGeometry = new THREE.BoxGeometry(bodyThickness, 0.2, 0.5);
-    const newBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    pigeon.add(newBody);
-    wingGeometry = new THREE.BoxGeometry(wingScale, 0.04, 0.2);
-    const newLeftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    newLeftWing.position.set(-bodyThickness, 0, 0);
-    newLeftWing.rotation.z = Math.PI / 6;
-    pigeon.add(newLeftWing);
-    const newRightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    newRightWing.position.set(bodyThickness, 0, 0);
-    newRightWing.rotation.z = -Math.PI / 6;
-    pigeon.add(newRightWing);
-}
 
 // Keyboard controls
-document.addEventListener('keydown', (event) => {
+document.addEventListener('keydown', function (event) {
     switch (event.key) {
         case 'w': moveForward = true; break;
         case 's': moveBackward = true; break;
         case 'a': moveLeft = true; break;
         case 'd': moveRight = true; break;
         case 'e': handleHatAction(); break;
-        case 'p':
-            customizationScreen.style.display = 'block';
-            document.exitPointerLock();
-            break;
     }
 });
-document.addEventListener('keyup', (event) => {
+document.addEventListener('keyup', function (event) {
     switch (event.key) {
         case 'w': moveForward = false; break;
         case 's': moveBackward = false; break;
@@ -472,7 +472,7 @@ document.addEventListener('keyup', (event) => {
 });
 
 // Mouse controls
-document.addEventListener('mousemove', (event) => {
+document.addEventListener('mousemove', function (event) {
     if (document.pointerLockElement === document.body || document.mozPointerLockElement === document.body) {
         const sensitivity = 0.002;
         yaw -= event.movementX * sensitivity;
@@ -481,36 +481,41 @@ document.addEventListener('mousemove', (event) => {
     }
 });
 
-document.addEventListener('mousedown', (event) => {
-    if (event.button === 0) { // Left click - single poop
+document.addEventListener('mousedown', function (event) {
+    if (!seagull) return;
+    if (event.button === 0) {
         const poopId = Date.now() + Math.random();
         const poop = new THREE.Mesh(
             new THREE.BoxGeometry(0.5, 0.5, 0.5),
-            new THREE.MeshBasicMaterial({ color: 0x654321 })
+            new THREE.MeshStandardMaterial({ color: 0x654321 })
         );
-        poop.position.copy(pigeon.position);
+        poop.position.copy(seagull.position);
         poop.velocity = new THREE.Vector3(0, -0.1, 0);
         poop.acceleration = new THREE.Vector3(0, -0.01, 0);
         poop.id = poopId;
+        poop.castShadow = true;
+        poop.receiveShadow = true;
         scene.add(poop);
         poops.push(poop);
         if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ poop: { x: poop.position.x, y: poop.position.y, z: poop.position.z, id: poopId } }));
         }
-    } else if (event.button === 2) { // Right click - diarrhea spray
+    } else if (event.button === 2) {
         const diarrheaPoops = [];
         for (let i = 0; i < 10; i++) {
             const poopId = Date.now() + Math.random() + i;
             const poop = new THREE.Mesh(
                 new THREE.BoxGeometry(0.3, 0.3, 0.3),
-                new THREE.MeshBasicMaterial({ color: 0x654321 })
+                new THREE.MeshStandardMaterial({ color: 0x654321 })
             );
-            poop.position.copy(pigeon.position);
+            poop.position.copy(seagull.position);
             const spreadX = (Math.random() - 0.5) * 2;
             const spreadZ = (Math.random() - 0.5) * 2;
             poop.velocity = new THREE.Vector3(spreadX * 0.05, -0.1 - Math.random() * 0.05, spreadZ * 0.05);
             poop.acceleration = new THREE.Vector3(0, -0.01, 0);
             poop.id = poopId;
+            poop.castShadow = true;
+            poop.receiveShadow = true;
             scene.add(poop);
             poops.push(poop);
             diarrheaPoops.push({ x: poop.position.x, y: poop.position.y, z: poop.position.z, id: poopId, vx: poop.velocity.x, vz: poop.velocity.z });
@@ -521,95 +526,68 @@ document.addEventListener('mousedown', (event) => {
     }
 });
 
-document.addEventListener('contextmenu', (event) => event.preventDefault());
+document.addEventListener('contextmenu', function (event) { event.preventDefault(); });
 
 // WebSocket connection
 const socket = new WebSocket('ws://localhost:8080');
 let otherPlayers = {};
 let playerId = null;
 
-socket.onopen = () => {
-    console.log("WebSocket connected");
-};
+socket.onopen = function () { console.log("WebSocket connected"); };
 
-socket.onmessage = (event) => {
+socket.onmessage = function (event) {
     const data = JSON.parse(event.data);
     if (data.id) playerId = data.id;
 
-    // Player positions and customizations
     const players = data.players || {};
     for (let id in players) {
         if (id !== playerId) {
             if (!otherPlayers[id]) {
-                const otherPigeon = new THREE.Group();
-                const otherBody = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.3, 0.2, 0.5),
-                    new THREE.MeshBasicMaterial({ color: 0x666666 })
+                const otherSeagull = new THREE.Group();
+                loader.load(
+                    './models/seagull.glb',
+                    function (gltf) {
+                        const model = gltf.scene.clone();
+                        model.scale.set(0.5, 0.5, 0.5);
+                        model.rotation.y = Math.PI; // Flip other seagulls too
+                        model.traverse(function (child) {
+                            if (child.isMesh) {
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+                        otherSeagull.add(model);
+                        const otherMixer = new THREE.AnimationMixer(model);
+                        const flapAction = otherMixer.clipAction(gltf.animations.find(function (anim) { return anim.name === 'flap'; }));
+                        flapAction.play();
+                        otherPlayers[id] = { group: otherSeagull, mixer: otherMixer, lastX: 0, lastZ: 0 };
+                    }
                 );
-                otherPigeon.add(otherBody);
-                const otherLeftWing = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.4, 0.04, 0.2),
-                    new THREE.MeshBasicMaterial({ color: 0x555555 })
-                );
-                otherLeftWing.position.set(-0.3, 0, 0);
-                otherLeftWing.rotation.z = Math.PI / 6;
-                otherPigeon.add(otherLeftWing);
-                const otherRightWing = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.4, 0.04, 0.2),
-                    new THREE.MeshBasicMaterial({ color: 0x555555 })
-                );
-                otherRightWing.position.set(0.3, 0, 0);
-                otherRightWing.rotation.z = -Math.PI / 6;
-                otherPigeon.add(otherRightWing);
-                const otherBeak = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.1, 0.06, 0.06),
-                    new THREE.MeshBasicMaterial({ color: 0xffa500 })
-                );
-                otherBeak.position.set(0, 0, 0.3);
-                otherPigeon.add(otherBeak);
-                const otherLeftFoot = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.1, 0.1, 0.1),
-                    new THREE.MeshBasicMaterial({ color: 0x808080 })
-                );
-                otherLeftFoot.position.set(-0.1, -0.1, 0.1);
-                otherPigeon.add(otherLeftFoot);
-                const otherRightFoot = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.1, 0.1, 0.1),
-                    new THREE.MeshBasicMaterial({ color: 0x808080 })
-                );
-                otherRightFoot.position.set(0.1, -0.1, 0.1);
-                otherPigeon.add(otherRightFoot);
-                scene.add(otherPigeon);
-                otherPlayers[id] = { group: otherPigeon, body: otherBody, leftWing: otherLeftWing, rightWing: otherRightWing };
+                scene.add(otherSeagull);
             }
-            otherPlayers[id].group.position.set(players[id].x, players[id].y, players[id].z);
-            otherPlayers[id].group.rotation.y = players[id].yaw || 0;
-            if (players[id].customization) {
-                const cust = players[id].customization;
-                otherPlayers[id].body.material.color.set(cust.bodyColor);
-                otherPlayers[id].leftWing.material.color.set(cust.wingColor);
-                otherPlayers[id].rightWing.material.color.set(cust.wingColor);
-                otherPlayers[id].group.children[4].material.color.set(cust.feetColor);
-                otherPlayers[id].group.children[5].material.color.set(cust.feetColor);
-                const bodyThickness = cust.bodyThickness;
-                const wingScale = cust.wingScale;
-                otherPlayers[id].body.geometry = new THREE.BoxGeometry(bodyThickness, 0.2, 0.5);
-                otherPlayers[id].leftWing.geometry = new THREE.BoxGeometry(wingScale, 0.04, 0.2);
-                otherPlayers[id].rightWing.geometry = new THREE.BoxGeometry(wingScale, 0.04, 0.2);
-                otherPlayers[id].leftWing.position.set(-bodyThickness, 0, 0);
-                otherPlayers[id].rightWing.position.set(bodyThickness, 0, 0);
+            const playerData = players[id];
+            otherPlayers[id].group.position.set(playerData.x, playerData.y, playerData.z);
+            otherPlayers[id].group.rotation.y = playerData.yaw || 0;
+            if (otherPlayers[id].mixer) {
+                const dx = playerData.x - (otherPlayers[id].lastX || playerData.x);
+                const dz = playerData.z - (otherPlayers[id].lastZ || playerData.z);
+                const speedMagnitude = Math.sqrt(dx * dx + dz * dz) / 0.016;
+                const flapSpeed = THREE.MathUtils.lerp(0.5, 2, Math.min(speedMagnitude / speed, 1));
+                otherPlayers[id].mixer.timeScale = flapSpeed;
+                otherPlayers[id].lastX = playerData.x;
+                otherPlayers[id].lastZ = playerData.z;
             }
-            if (players[id].hat) {
-                if (!otherPlayers[id].hat) {
-                    const hat = new THREE.Mesh(
-                        new THREE.BoxGeometry(players[id].hat.width, players[id].hat.height, players[id].hat.depth),
-                        new THREE.MeshBasicMaterial({ color: players[id].hat.color })
-                    );
-                    hat.position.set(0, 0.4, 0);
-                    otherPlayers[id].group.add(hat);
-                    otherPlayers[id].hat = hat;
-                }
-            } else if (otherPlayers[id].hat) {
+            if (playerData.hat && !otherPlayers[id].hat) {
+                const hat = new THREE.Mesh(
+                    new THREE.BoxGeometry(playerData.hat.width, playerData.hat.height, playerData.hat.depth),
+                    new THREE.MeshStandardMaterial({ color: playerData.hat.color })
+                );
+                hat.position.set(0, 0.4, 0);
+                hat.castShadow = true;
+                hat.receiveShadow = true;
+                otherPlayers[id].group.add(hat);
+                otherPlayers[id].hat = hat;
+            } else if (!playerData.hat && otherPlayers[id].hat) {
                 otherPlayers[id].group.remove(otherPlayers[id].hat);
                 delete otherPlayers[id].hat;
             }
@@ -622,50 +600,51 @@ socket.onmessage = (event) => {
         }
     }
 
-    // Single poop
-    if (data.poop) {
-        if (!poops.some(p => p.id === data.poop.id)) {
-            const poop = new THREE.Mesh(
-                new THREE.BoxGeometry(0.5, 0.5, 0.5),
-                new THREE.MeshBasicMaterial({ color: 0x654321 })
-            );
-            poop.position.set(data.poop.x, data.poop.y, data.poop.z);
-            poop.velocity = new THREE.Vector3(0, -0.1, 0);
-            poop.acceleration = new THREE.Vector3(0, -0.01, 0);
-            poop.id = data.poop.id;
-            scene.add(poop);
-            poops.push(poop);
-        }
+    if (data.poop && !poops.some(function (p) { return p.id === data.poop.id; })) {
+        const poop = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.5, 0.5),
+            new THREE.MeshStandardMaterial({ color: 0x654321 })
+        );
+        poop.position.set(data.poop.x, data.poop.y, data.poop.z);
+        poop.velocity = new THREE.Vector3(0, -0.1, 0);
+        poop.acceleration = new THREE.Vector3(0, -0.01, 0);
+        poop.id = data.poop.id;
+        poop.castShadow = true;
+        poop.receiveShadow = true;
+        scene.add(poop);
+        poops.push(poop);
     }
 
-    // Diarrhea spray
     if (data.diarrhea) {
-        data.diarrhea.forEach(d => {
-            if (!poops.some(p => p.id === d.id)) {
+        data.diarrhea.forEach(function (d) {
+            if (!poops.some(function (p) { return p.id === d.id; })) {
                 const poop = new THREE.Mesh(
                     new THREE.BoxGeometry(0.3, 0.3, 0.3),
-                    new THREE.MeshBasicMaterial({ color: 0x654321 })
+                    new THREE.MeshStandardMaterial({ color: 0x654321 })
                 );
                 poop.position.set(d.x, d.y, d.z);
                 poop.velocity = new THREE.Vector3(d.vx, -0.1 - Math.random() * 0.05, d.vz);
                 poop.acceleration = new THREE.Vector3(0, -0.01, 0);
                 poop.id = d.id;
+                poop.castShadow = true;
+                poop.receiveShadow = true;
                 scene.add(poop);
                 poops.push(poop);
             }
         });
     }
 
-    // Ground hats
     if (data.groundHats) {
         for (let hatId in data.groundHats) {
             if (!groundHats[hatId]) {
                 const hatData = data.groundHats[hatId];
                 const hat = new THREE.Mesh(
                     new THREE.BoxGeometry(hatData.width, hatData.height, hatData.depth),
-                    new THREE.MeshBasicMaterial({ color: hatData.color })
+                    new THREE.MeshStandardMaterial({ color: hatData.color })
                 );
                 hat.position.set(hatData.x, hatData.y, hatData.z);
+                hat.castShadow = true;
+                hat.receiveShadow = true;
                 scene.add(hat);
                 groundHats[hatId] = hat;
             }
@@ -678,20 +657,21 @@ socket.onmessage = (event) => {
         }
     }
 
-    // NPC states
     if (data.npcs) {
         for (let npcId in data.npcs) {
             const npcData = data.npcs[npcId];
-            const npc = npcs.find(n => n.id === npcId);
+            const npc = npcs.find(function (n) { return n.id === npcId; });
             if (npc) {
                 npc.position.set(npcData.x, npcData.y, npcData.z);
                 npc.rotation.y = npcData.rotationY;
                 if (npcData.hat && !npc.hat) {
                     const hat = new THREE.Mesh(
                         new THREE.BoxGeometry(npcData.hat.width, npcData.hat.height, npcData.hat.depth),
-                        new THREE.MeshBasicMaterial({ color: npcData.hat.color })
+                        new THREE.MeshStandardMaterial({ color: npcData.hat.color })
                     );
                     hat.position.y = 1.3;
+                    hat.castShadow = true;
+                    hat.receiveShadow = true;
                     npc.add(hat);
                     npc.hat = hat;
                     npc.hatType = { geometry: hat.geometry, color: npcData.hat.color };
@@ -705,30 +685,24 @@ socket.onmessage = (event) => {
                     npc.pooped = true;
                     if (npcData.pooper === playerId) {
                         poopCount++;
-                        poopCounter.textContent = `People Pooped On: ${poopCount}`;
+                        poopCounter.textContent = 'People Pooped On: ' + poopCount;
                     }
                 }
             }
         }
     }
 
-    // Chat messages
-    if (data.chat) {
-        addChatMessage(data.chat);
-    }
-
-    // Join message
-    if (data.join) {
-        addChatMessage(`Player ${data.join} has joined the server!`);
-    }
+    if (data.chat) addChatMessage(data.chat);
+    if (data.join) addChatMessage('Player ' + data.join + ' has joined the server!');
 };
 
 // Hat action
 function handleHatAction() {
+    if (!seagull) return;
     if (currentHat) {
-        pigeon.remove(currentHat);
+        seagull.remove(currentHat);
         const hatId = Date.now() + Math.random();
-        currentHat.position.set(pigeon.position.x, 0.1, pigeon.position.z);
+        currentHat.position.set(seagull.position.x, 0.1, seagull.position.z);
         scene.add(currentHat);
         groundHats[hatId] = currentHat;
         if (socket.readyState === WebSocket.OPEN) {
@@ -747,14 +721,14 @@ function handleHatAction() {
         }
         currentHat = null;
     } else {
-        npcs.forEach(npc => {
+        npcs.forEach(function (npc) {
             if (npc.hat) {
-                const distance = pigeon.position.distanceTo(npc.position);
+                const distance = seagull.position.distanceTo(npc.position);
                 if (distance < 3) {
                     npc.remove(npc.hat);
                     currentHat = npc.hat;
                     currentHat.position.set(0, 0.4, 0);
-                    pigeon.add(currentHat);
+                    seagull.add(currentHat);
                     if (socket.readyState === WebSocket.OPEN) {
                         socket.send(JSON.stringify({ stealHat: { npcId: npc.id } }));
                     }
@@ -765,15 +739,15 @@ function handleHatAction() {
         });
         for (let hatId in groundHats) {
             const hat = groundHats[hatId];
-            const distance = pigeon.position.distanceTo(hat.position);
+            const distance = seagull.position.distanceTo(hat.position);
             if (distance < 3) {
                 scene.remove(hat);
                 delete groundHats[hatId];
                 currentHat = hat;
                 currentHat.position.set(0, 0.4, 0);
-                pigeon.add(currentHat);
+                seagull.add(currentHat);
                 if (socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify({ pickHat: { hatId } }));
+                    socket.send(JSON.stringify({ pickHat: { hatId: hatId } }));
                 }
             }
         }
@@ -819,61 +793,63 @@ function checkCollision(pos, width, height, depth) {
 function animate() {
     requestAnimationFrame(animate);
 
-    // Flap wings when moving
-    if (moveForward || moveBackward || moveLeft || moveRight) {
-        wingFlapAngle += flapSpeed;
-        leftWing.rotation.z = Math.PI / 6 + Math.sin(wingFlapAngle) * 0.3;
-        rightWing.rotation.z = -Math.PI / 6 - Math.sin(wingFlapAngle) * 0.3;
-    } else {
-        leftWing.rotation.z = Math.PI / 6;
-        rightWing.rotation.z = -Math.PI / 6;
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
+    for (let id in otherPlayers) {
+        if (otherPlayers[id].mixer) otherPlayers[id].mixer.update(delta);
     }
 
-    // Update pigeon rotation
-    pigeon.rotation.order = 'YXZ';
-    pigeon.rotation.y = yaw;
-    pigeon.rotation.x = pitch;
+    if (seagull) {
+        seagull.rotation.order = 'YXZ';
+        seagull.rotation.y = yaw;
+        seagull.rotation.x = pitch;
 
-    // Move pigeon with collision
-    const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(pigeon.quaternion);
-    const sideDirection = new THREE.Vector3(-1, 0, 0).applyQuaternion(pigeon.quaternion);
-    const newPosition = pigeon.position.clone();
+        const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(seagull.quaternion);
+        const sideDirection = new THREE.Vector3(-1, 0, 0).applyQuaternion(seagull.quaternion);
+        const newPosition = seagull.position.clone();
 
-    if (moveForward) newPosition.addScaledVector(direction, speed);
-    if (moveBackward) newPosition.addScaledVector(direction, -speed);
-    if (moveLeft) newPosition.addScaledVector(sideDirection, speed);
-    if (moveRight) newPosition.addScaledVector(sideDirection, -speed);
+        if (moveForward) newPosition.addScaledVector(direction, speed);
+        if (moveBackward) newPosition.addScaledVector(direction, -speed);
+        if (moveLeft) newPosition.addScaledVector(sideDirection, speed);
+        if (moveRight) newPosition.addScaledVector(sideDirection, -speed);
 
-    if (newPosition.y >= 0.5 && !checkCollision(newPosition, 0.3, 0.2, 0.5)) {
-        pigeon.position.copy(newPosition);
-    }
-    if (pigeon.position.y < 0.5) pigeon.position.y = 0.5;
-
-    // Camera
-    const cameraOffset = new THREE.Vector3(0, 2, 4);
-    cameraOffset.applyQuaternion(pigeon.quaternion);
-    camera.position.copy(pigeon.position).add(cameraOffset);
-    camera.quaternion.copy(pigeon.quaternion);
-
-    // Send position and state to server
-    if (socket.readyState === WebSocket.OPEN) {
-        const state = {
-            position: { x: pigeon.position.x, y: pigeon.position.y, z: pigeon.position.z },
-            yaw: yaw
-        };
-        if (currentHat) {
-            state.hat = {
-                width: currentHat.geometry.parameters.width,
-                height: currentHat.geometry.parameters.height,
-                depth: currentHat.geometry.parameters.depth,
-                color: currentHat.material.color.getHex()
-            };
+        if (newPosition.y >= 0.5 && !checkCollision(newPosition, 0.3, 0.2, 0.5)) {
+            seagull.position.copy(newPosition);
         }
-        socket.send(JSON.stringify(state));
+        if (seagull.position.y < 0.5) seagull.position.y = 0.5;
+
+        velocity.subVectors(seagull.position, lastPosition).divideScalar(delta || 0.016);
+        lastPosition.copy(seagull.position);
+
+        const speedMagnitude = velocity.length();
+        const minFlapSpeed = 0.5;
+        const maxFlapSpeed = 2;
+        const flapSpeed = THREE.MathUtils.lerp(minFlapSpeed, maxFlapSpeed, Math.min(speedMagnitude / speed, 1));
+        if (mixer) mixer.timeScale = flapSpeed;
+
+        const cameraOffset = new THREE.Vector3(0, 2, 4);
+        cameraOffset.applyQuaternion(seagull.quaternion);
+        camera.position.copy(seagull.position).add(cameraOffset);
+        camera.quaternion.copy(seagull.quaternion);
+
+        if (socket.readyState === WebSocket.OPEN) {
+            const state = {
+                position: { x: seagull.position.x, y: seagull.position.y, z: seagull.position.z },
+                yaw: yaw
+            };
+            if (currentHat) {
+                state.hat = {
+                    width: currentHat.geometry.parameters.width,
+                    height: currentHat.geometry.parameters.height,
+                    depth: currentHat.geometry.parameters.depth,
+                    color: currentHat.material.color.getHex()
+                };
+            }
+            socket.send(JSON.stringify(state));
+        }
     }
 
-    // Update NPCs
-    npcs.forEach(npc => {
+    npcs.forEach(function (npc) {
         if (npc.isHorizontal) {
             npc.position.x += npc.speed * npc.direction;
             npc.position.z = npc.sidewalkPos;
@@ -891,8 +867,7 @@ function animate() {
         }
     });
 
-    // Update Cars
-    cars.forEach(car => {
+    cars.forEach(function (car) {
         if (car.isHorizontal) {
             car.position.x += car.speed * car.direction;
             car.position.z = car.roadPos;
@@ -904,21 +879,20 @@ function animate() {
         }
     });
 
-    // Update Poop
-    poops.forEach((poop, index) => {
+    poops.forEach(function (poop, index) {
         poop.velocity.add(poop.acceleration);
         poop.position.add(poop.velocity);
         if (poop.position.y < 0) {
             scene.remove(poop);
             poops.splice(index, 1);
         } else {
-            npcs.forEach(npc => {
+            npcs.forEach(function (npc) {
                 const distance = poop.position.distanceTo(npc.position);
                 if (distance < 1 && !npc.pooped) {
                     npc.children[0].material.color.set(0x654321);
                     npc.pooped = true;
                     poopCount++;
-                    poopCounter.textContent = `People Pooped On: ${poopCount}`;
+                    poopCounter.textContent = 'People Pooped On: ' + poopCount;
                     if (socket.readyState === WebSocket.OPEN) {
                         socket.send(JSON.stringify({ poopHit: { npcId: npc.id, pooper: playerId } }));
                     }
